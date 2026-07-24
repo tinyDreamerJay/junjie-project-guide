@@ -1,4 +1,4 @@
 interface:
   display_name: "JunJie Project Guide"
-  short_description: "帮助 AI 编程新手理解项目、完成可验证改动并安全协作"
-  default_prompt: "使用 $junjie-project-guide 用新手能理解的中文检查当前项目，并带我完成这项任务。"
+  short_description: "帮助 AI 编程新手完成可验证改动并强制维护项目文档"
+  default_prompt: "使用 $junjie-project-guide 用新手能理解的中文完成任务，并确保项目基础文档和本次变更日志同步更新。"

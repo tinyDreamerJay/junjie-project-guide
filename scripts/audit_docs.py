@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""检查本地 Markdown 链接和常见环境变量的文档缺口。"""
+"""检查项目最低文档、Markdown 链接和常见环境变量覆盖。"""
 
 from __future__ import annotations
 
@@ -28,6 +28,9 @@ EXCLUDED_DIRS = {
 }
 
 ENV_EXAMPLES = (".env.example", ".env.sample", ".env.template")
+HUMAN_ENTRY_FILES = ("README.md",)
+COLLABORATION_ENTRY_FILES = ("AGENTS.md", "CONTRIBUTING.md")
+CHANGELOG_FILES = ("CHANGELOG.md", "HISTORY.md")
 SYSTEM_ENV = {
     "CI",
     "COLORTERM",
@@ -141,6 +144,32 @@ def audit_links(root: Path, files: list[Path]) -> list[str]:
     return issues
 
 
+def has_named_file(root: Path, names: tuple[str, ...]) -> bool:
+    wanted = {name.casefold() for name in names}
+    return any(path.is_file() and path.name.casefold() in wanted for path in root.iterdir())
+
+
+def has_changelog(root: Path) -> bool:
+    if has_named_file(root, CHANGELOG_FILES):
+        return True
+    changelog_dir = root / "docs" / "changelog"
+    return changelog_dir.is_dir() and any(
+        path.is_file() and path.suffix.lower() == ".md" and path.name.casefold() != "readme.md"
+        for path in changelog_dir.iterdir()
+    )
+
+
+def audit_minimum_docs(root: Path) -> list[str]:
+    issues: list[str] = []
+    if not has_named_file(root, HUMAN_ENTRY_FILES):
+        issues.append("项目缺少 README.md 人类入口文档")
+    if not has_named_file(root, COLLABORATION_ENTRY_FILES):
+        issues.append("项目缺少 AGENTS.md 或 CONTRIBUTING.md 协作入口")
+    if not has_changelog(root):
+        issues.append("项目缺少 CHANGELOG.md 或 docs/changelog/ 下的实际变更记录")
+    return issues
+
+
 def find_env_example(root: Path) -> Path | None:
     for name in ENV_EXAMPLES:
         candidate = root / name
@@ -181,6 +210,7 @@ def main() -> int:
         return 2
 
     files = list(iter_files(root))
+    minimum_doc_issues = audit_minimum_docs(root)
     link_issues = audit_links(root, files)
     env_issues: list[str] = []
     env_summary = "环境变量覆盖检查已关闭。"
@@ -191,7 +221,7 @@ def main() -> int:
     print(f"Markdown 文件：{sum(path.suffix.lower() == '.md' for path in files)}")
     print(env_summary)
 
-    issues = link_issues + env_issues
+    issues = minimum_doc_issues + link_issues + env_issues
     if issues:
         print("\n发现问题：")
         for issue in issues:
